@@ -33,6 +33,9 @@ CLEANUP=1
 # install distination
 DEST=~
 
+# where to get the files from
+FROM=`pwd`
+
 # show colors in changes output
 COLORS=1
 
@@ -59,6 +62,10 @@ for i in "$@"; do
             ;;
         --to=*)
             DEST="${i#*=}"
+            shift
+            ;;
+        --from=*)
+            FROM="${i#*=}"
             shift
             ;;
         --filter=*)
@@ -102,6 +109,7 @@ if [ "$DEBUG" -ne 0 ]; then
     echo "dry run:        $DRY_RUN"
     echo "clean:          $CLEANUP"
     echo "dest:           $DEST"
+    echo "src:            $FROM"
     echo "colors:         $COLORS"
     echo "symbolic links: $SYMBOLIC"
     echo "filter:         $FILTER"
@@ -193,7 +201,7 @@ if [ $0 = "bash" ]; then
 
     SRC=`pwd`
 else
-  SRC=`pwd`
+  SRC=$FROM
 fi
 
 if [ "$DATE_CMD" != '' ]; then
