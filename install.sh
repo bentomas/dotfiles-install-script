@@ -31,10 +31,10 @@ PRINT_DIFFS=0
 CLEANUP=1
 
 # install distination
-DEST=~
+DEST=
 
 # where to get the files from
-FROM=`pwd`
+SRC=
 
 # show colors in changes output
 COLORS=1
@@ -65,7 +65,7 @@ for i in "$@"; do
             shift
             ;;
         --from=*)
-            FROM="${i#*=}"
+            SRC="${i#*=}"
             shift
             ;;
         --filter=*)
@@ -109,7 +109,7 @@ if [ "$DEBUG" -ne 0 ]; then
     echo "dry run:        $DRY_RUN"
     echo "clean:          $CLEANUP"
     echo "dest:           $DEST"
-    echo "src:            $FROM"
+    echo "src:            $SRC"
     echo "colors:         $COLORS"
     echo "symbolic links: $SYMBOLIC"
     echo "filter:         $FILTER"
@@ -157,52 +157,11 @@ else
 fi
 
 ################################################################################
-#### figure out the source location
+#### figure out locations
 ################################################################################
 
-# check how this is being run, if piping, then download files
-if [ $0 = "bash" ]; then
-    SRC="https://bitbucket.org/bentomas/dotfiles/get/master.tar.gz"
-    # store the downloaded files here
-    TMP_SRC_FOLDER="dotfiles_src"
-
-
-    echo "downloading src from server..."
-    echo "from:        $SRC"
-    echo "to:          $TMP_SRC_FOLDER"
-    echo ""
-
-    # if the folder already exists, we don't want to accidentally install a bunch
-    # of random files, so exit if it fails
-    mkdir $TMP_SRC_FOLDER || exit 2;
-
-    # try and find a suitable tar executable
-    tar=`which gtar 2>&1`
-    if [ $? -ne 0 ] || ! [ -x $tar ]; then
-        tar=tar
-    fi
-
-    # look for curl and if it doesn't exist, try wget
-    fetch=`which curl 2>&1`
-    if [ $? -ne 0 ] || ! [ -x $fetch ]; then
-        fetch="wget -qO -"
-    else
-        fetch="$fetch -Lsf"
-    fi
-
-    # actually download and unpack
-    $fetch https://bitbucket.org/bentomas/dotfiles/get/master.tar.gz | $tar x -C $TMP_SRC_FOLDER || { rmdir $TMP_SRC_FOLDER; exit 2; };
-
-    cd $TMP_SRC_FOLDER
-    folder=$(ls -A .)
-
-    mv $folder/* .
-    rm -r $folder
-
-    SRC=`pwd`
-else
-  SRC=$FROM
-fi
+SRC=`eval echo ${SRC//>}`
+DEST=`eval echo ${DEST//>}`
 
 if [ "$DATE_CMD" != '' ]; then
     CURRENT_TIME=`$DATE_CMD "+%m-%d_%H-%M-%S"`
@@ -211,21 +170,35 @@ else
 fi
 BACKUP_DEST="${SRC}/dotfiles_$CURRENT_TIME"
 
-DEST=`eval echo ${DEST//>}`
-
 echo "src:          $SRC"
 echo "backup:       $BACKUP_DEST"
 echo "destination:  $DEST"
 
+if [ ! -d "$SRC" ]; then
+    echo ""
+    echo "cannot find src folder"
+    exit
+fi
+
+if [ ! -d "$DEST" ]; then
+    echo ""
+    echo "cannot find destination folder"
+    exit
+fi
+
 if [ ! "$FILTER" = "" ]; then
     if [ -f "$SRC/$FILTER" ]; then
+        # it's a file, do nothing
         nop_isfile=1
     elif [ -d "$SRC/$FILTER" ]; then
+        # it's a directory
         case "$FILTER" in
             */)
+                # already has a slash at the end, do nothing
                 nop_hasslashalready=1
                 ;;
             *)
+                # add slash at end
                 FILTER="$FILTER/"
                 echo "doesn't have a slash"
                 ;;
