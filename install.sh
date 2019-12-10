@@ -42,6 +42,9 @@ SYMBOLIC=0
 # filter files by this name
 FILTER=''
 
+# if you want to uninstall
+ONLY_REMOVE=0
+
 # parse the options
 for i in "$@"; do
     case $i in
@@ -82,6 +85,10 @@ for i in "$@"; do
             SYMBOLIC=1
             shift
             ;;
+        --remove)
+            ONLY_REMOVE=1
+            shift
+            ;;
         *)
             echo "unknown option: $i"
             exit
@@ -98,6 +105,7 @@ if [ "$DEBUG" -ne 0 ]; then
     echo "colors:         $COLORS"
     echo "symbolic links: $SYMBOLIC"
     echo "filter:         $FILTER"
+    echo "only remove:    $ONLY_REMOVE"
 
     echo ''
 fi
@@ -274,7 +282,7 @@ for filename in ${remove_candidates[@]}; do
 
         # if the file already exists then we need to see if it changed
         if [ -f "$DEST/.$filename" ]; then
-            if [ -f "$SRC/$filename" ]; then
+            if [  "$ONLY_REMOVE" -eq 0 -a -f "$SRC/$filename" ]; then
                 # it still exists in the new files, check and see if it changed
                 if [ "$DIFF_CMD" != '' ]; then
                     $DIFF_CMD "$DEST/.$filename" "$SRC/$filename" > /dev/null 2> /dev/null
@@ -415,65 +423,71 @@ fi
 ################################################################################
 
 if [ "$DRY_RUN" -eq 0 ]; then
-    has_outputted_copying=0
+    if [ "$ONLY_REMOVE" -eq 0 ]; then
+        has_outputted_copying=0
 
-    mkdir -p "$DEST/"
+        mkdir -p "$DEST/"
 
-    if [ -f "$DEST/.config_files_installed" ]; then
-        rm "$DEST/.config_files_installed"
-    fi
+        if [ -f "$DEST/.config_files_installed" ]; then
+            rm "$DEST/.config_files_installed"
+        fi
 
-    # we're about to create a new list of the files, so start with a blank one
-    touch "$DEST/.config_files_installed"
+        # we're about to create a new list of the files, so start with a blank one
+        touch "$DEST/.config_files_installed"
 
-    for filename in ${srcfiles[@]}; do
-        filename=${filename:${#SRC}+1}
-        #echo $filename
+        for filename in ${srcfiles[@]}; do
+            filename=${filename:${#SRC}+1}
+            #echo $filename
 
-        dirname=( `dirname "$filename"` )
+            dirname=( `dirname "$filename"` )
 
-        # make sure the file is a file and not a directory
-        if [ -f "$SRC/$filename" ]; then
-            # don't bother overwritting if the file already is there (because it didn't change)
-            if [ ! -f "$DEST/.$filename" ]; then
-                # only write this file if there isn't a filter, or if the file matches the filter
-                if [ "$FILTER" = "" -o "$filename" != "${filename/$FILTER/}" ]; then
-                    if [ "$has_outputted_copying" -eq 0 ]; then
-                        has_outputted_copying=1
-                        echo "writing src versions"
-                    fi
-                    if [ $dirname != '.' -a ! -d "$DEST/.$dirname" ]; then
-                        if [ "$DEBUG" -ne 0 ]; then
-                            echo ".$dirname"
+            # make sure the file is a file and not a directory
+            if [ -f "$SRC/$filename" ]; then
+                # don't bother overwritting if the file already is there (because it didn't change)
+                if [ ! -f "$DEST/.$filename" ]; then
+                    # only write this file if there isn't a filter, or if the file matches the filter
+                    if [ "$FILTER" = "" -o "$filename" != "${filename/$FILTER/}" ]; then
+                        if [ "$has_outputted_copying" -eq 0 ]; then
+                            has_outputted_copying=1
+                            echo "writing src versions"
                         fi
-                        #echo "mkdir -p \"$DEST/.$dirname\""
-                        mkdir -p "$DEST/.$dirname"
-                    fi
+                        if [ $dirname != '.' -a ! -d "$DEST/.$dirname" ]; then
+                            if [ "$DEBUG" -ne 0 ]; then
+                                echo ".$dirname"
+                            fi
+                            #echo "mkdir -p \"$DEST/.$dirname\""
+                            mkdir -p "$DEST/.$dirname"
+                        fi
 
-                    if [ "$DEBUG" -ne 0 ]; then
-                        echo ".$filename"
-                    fi
+                        if [ "$DEBUG" -ne 0 ]; then
+                            echo ".$filename"
+                        fi
 
+                        if [ "$SYMBOLIC" -ne 0 ]; then
+                            echo "ln -s \"$SRC/$filename\" \"$DEST/.$filename\""
+                            ln -s "$SRC/$filename" "$DEST/.$filename"
+                        else
+                            #echo "cp \"$SRC/$filename\" \"$DEST/.$filename\""
+                            cp "$SRC/$filename" "$DEST/.$filename"
+                        fi
+                    fi
+                fi
+                echo "$filename" >> $DEST/.config_files_installed
+            elif [ -d "$SRC/$filename" ]; then
+                if [ ! -d "$DEST/.$filename" ]; then
                     if [ "$SYMBOLIC" -ne 0 ]; then
                         echo "ln -s \"$SRC/$filename\" \"$DEST/.$filename\""
                         ln -s "$SRC/$filename" "$DEST/.$filename"
-                    else
-                        #echo "cp \"$SRC/$filename\" \"$DEST/.$filename\""
-                        cp "$SRC/$filename" "$DEST/.$filename"
                     fi
                 fi
+                echo "$filename" >> $DEST/.config_files_installed
             fi
-            echo "$filename" >> $DEST/.config_files_installed
-        elif [ -d "$SRC/$filename" ]; then
-            if [ ! -d "$DEST/.$filename" ]; then
-                if [ "$SYMBOLIC" -ne 0 ]; then
-                    echo "ln -s \"$SRC/$filename\" \"$DEST/.$filename\""
-                    ln -s "$SRC/$filename" "$DEST/.$filename"
-                fi
-            fi
-            echo "$filename" >> $DEST/.config_files_installed
+        done
+    else
+        if [ "$DEBUG" -ne 0 ]; then
+            echo "skipping writing new"
         fi
-    done
+    fi
 fi
 
 ################################################################################
