@@ -1,15 +1,7 @@
 #! /bin/bash
 
-# this install script isn't a config file, obviously.  You can download it and
-# pipe it into bash to automatically install all the files.  Makes getting set
-# up on a new computer a breeze!
-#
-# you can run this script in two ways:
-#
-# 1. the continuation of part 1, but download the install script, too
-#     curl https://bitbucket.org/bentomas/dotfiles/src/master/install.sh | bash
-# 2. this will use the specified directory for the src config files:
-#     bash install.sh <dir>
+# example usage:
+#     bash ~/path/to/script/install.sh --from=~/path/to/files --to=~ --changes
 
 ################################################################################
 #### parse arguments
