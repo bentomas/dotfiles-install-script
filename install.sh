@@ -419,7 +419,8 @@ if [ "$DRY_RUN" -eq 0 ]; then
 
             # make sure the file is a file and not a directory
             if [ -f "$SRC/$filename" ]; then
-                # don't bother overwritting if the file already is there (because it didn't change)
+                # don't bother overwritting if the file already is there (because
+                # it didn't change: we mv files that changed to the backup folder)
                 if [ ! -f "$DEST/.$filename" ]; then
                     # only write this file if there isn't a filter, or if the file matches the filter
                     if [ "$FILTER" = "" -o "$filename" != "${filename/$FILTER/}" ]; then
@@ -427,6 +428,7 @@ if [ "$DRY_RUN" -eq 0 ]; then
                             has_outputted_copying=1
                             echo "writing src versions"
                         fi
+                        # make sure the directory exists for this file
                         if [ $dirname != '.' -a ! -d "$DEST/.$dirname" ]; then
                             if [ "$DEBUG" -ne 0 ]; then
                                 echo ".$dirname"
@@ -450,12 +452,17 @@ if [ "$DRY_RUN" -eq 0 ]; then
                 fi
                 echo "$filename" >> $DEST/.config_files_installed
             elif [ -d "$SRC/$filename" ]; then
+                # it isn't a file, it's a dir.  we skip dirs, as they'll get made
+                # for actual files above, UNLESS we're doing a symbolic link install,
+                # in which case we want to create the symbolic link for this folder
                 if [ ! -d "$DEST/.$filename" ]; then
                     if [ "$SYMBOLIC" -ne 0 ]; then
                         echo "ln -s \"$SRC/$filename\" \"$DEST/.$filename\""
                         ln -s "$SRC/$filename" "$DEST/.$filename"
                     fi
                 fi
+                # either way, we want to keep track of this folder as being installed
+                # so it can be removed if necessary
                 echo "$filename" >> $DEST/.config_files_installed
             fi
         done
