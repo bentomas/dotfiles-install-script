@@ -1,6 +1,7 @@
 
 TODO:
 
+- don't depend on trash script in src
 - can pass in git url to download src files from
 - can specify directories to skip
 - can specify name of file that keeps track of what is installed
