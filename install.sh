@@ -132,6 +132,9 @@ fi
 # try and find a suitable date executable
 DATE_CMD=`which date 2>&1`
 
+# try and find a trash command
+TRASH_CMD=`which trash`
+
 ################################################################################
 #### colors
 ################################################################################
@@ -474,17 +477,12 @@ if [ "$CLEANUP" -ne 0 ]; then
         if [ "$DEBUG" -ne 0 ]; then
             echo "trashing '$BACKUP_DEST'"
         fi
-        $SRC/bin/trash "$BACKUP_DEST/"
-    fi
 
-    # remove src directory if we created one
-    if [ ${#TMP_SRC_FOLDER} -gt 0 ]; then
-        echo "cleaning up src"
-        if [ "$DEBUG" -ne 0 ]; then
-            echo "trashing '$TMP_SRC_FOLDER'"
+        if [ -e "$TRASH_CMD" ]; then
+          $TRASH_CMD "$BACKUP_DEST/"
+        else
+          echo "failed to clean backup because could not find a \`trash\` command"
         fi
-        cd ..
-        $SRC/bin/trash $TMP_SRC_FOLDER
     fi
 else
     if [ "$DEBUG" -ne 0 ]; then
